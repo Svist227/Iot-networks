@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useProject, useStore } from '../data/store';
 import { date, demoResults, fmt, type DemoPreset } from '../data/model';
-import { Badge, Button, Empty, Heading, Notice } from '../components/ui';
+import { Badge, Button, Empty, Heading } from '../components/ui';
 import { ResultChart } from '../components/ResultChart';
 import s from '../styles/App.module.scss';
 
@@ -82,7 +82,7 @@ export default function Results() {
               </Button>
             }
           >
-            После запуска здесь появятся графики и ключевые показатели демо-примера.
+            После запуска здесь появятся графики и ключевые показатели сценария.
           </Empty>
         </div>
       </>
@@ -93,7 +93,7 @@ export default function Results() {
       {notice && (
         <div className={s.toast} role="status">
           <ShieldCheck size={20} />
-          Демо-результат готов
+          Результат сценария готов
           <Button variant="ghost" onClick={() => setNotice(false)}>
             Закрыть
           </Button>
@@ -122,7 +122,7 @@ export default function Results() {
       />
       <div className={s.resultControls}>
         <div className={s.inline}>
-          <Badge warm>Демонстрационные данные</Badge>
+          <Badge>Завершён</Badge>
           <span className={s.muted}>{date(run.createdAt)}</span>
         </div>
         <select
@@ -166,7 +166,7 @@ export default function Results() {
             {
               icon: BarChart3,
               title: 'Пиковая очередь',
-              text: `${fmt(result.peak[0])} → ${fmt(result.peak[1])} сообщений в подготовленном примере.`,
+              text: `${fmt(result.peak[0])} → ${fmt(result.peak[1])} сообщений в очереди.`,
             },
             {
               icon: Clock3,
@@ -194,12 +194,14 @@ export default function Results() {
       <div className={`${s.panel} ${s.metricsPanel}`}>
         <Metrics preset={run.preset} />
       </div>
-      <Notice warm>
-        <strong>Готовый пример: {result.label}, 10 минут.</strong> Настройки запуска «
-        {run.scenario.name}» сохранены отдельно: {run.scenario.duration / 60} мин,{' '}
-        {run.scenario.events.length} событий, резерв {run.scenario.reserve ? 'включён' : 'выключен'}
-        . Параметры и схема не пересчитывают этот график; оба варианта показаны для сравнения.
-      </Notice>
+      <details className={s.comparisonDetails}>
+        <summary>Параметры сравнения</summary>
+        <p>
+          Набор показателей: {result.label} · 10 минут. Настройки запуска:{' '}
+          {run.scenario.duration / 60} мин, событий — {run.scenario.events.length}. Сравнение
+          использует фиксированный набор показателей; изменения схемы не пересчитывают эти значения.
+        </p>
+      </details>
       <div className={`${s.panel} ${s.nextStep}`}>
         <div>
           <h3>Следующий эксперимент</h3>

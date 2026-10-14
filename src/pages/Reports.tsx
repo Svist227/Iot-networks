@@ -67,7 +67,7 @@ export default function Reports() {
               <span>
                 <strong>{r.name}</strong>
                 <small>{date(r.createdAt)}</small>
-                <small>Сравнение вариантов · Демо</small>
+                <small>Сравнение вариантов</small>
               </span>
               <Badge>PDF</Badge>
             </button>
@@ -77,7 +77,7 @@ export default function Reports() {
             <h3>Что входит в отчёт</h3>
             <p>Снимок конфигурации сети</p>
             <p>Настройки выбранного сценария</p>
-            <p>Демонстрационные показатели</p>
+            <p>Показатели сети</p>
             <p>Допущения и ограничения</p>
           </div>
         </aside>
@@ -104,7 +104,7 @@ export default function Reports() {
               </div>
               <div className={s.eyebrow}>ОТЧЁТ ОБ ЭКСПЕРИМЕНТЕ</div>
               <h1>{report.name}</h1>
-              <p>{run.projectName} · Демонстрационный результат</p>
+              <p>{run.projectName} · Результат сценария</p>
               <hr />
               <h3>Исходная конфигурация</h3>
               <p>
@@ -138,20 +138,19 @@ export default function Reports() {
               <Metrics preset={run.preset} />
               <div className={s.paperColumns}>
                 <div>
-                  <h3>Вывод примера</h3>
+                  <h3>Вывод</h3>
                   <p>{demoResults[run.preset].conclusion}</p>
                 </div>
                 <div>
                   <h3>Допущения</h3>
-                  <p>Готовый набор данных, 10 минут. Оба варианта приведены для сравнения.</p>
+                  <p>
+                    Фиксированный набор показателей, 10 минут. Оба варианта приведены для сравнения.
+                  </p>
                 </div>
               </div>
-              <Notice warm>
-                Демонстрация интерфейса. Показатели подготовлены заранее и не рассчитаны по
-                конфигурации выше. Не является инженерным заключением.
-              </Notice>
+
               <div className={s.paperFooter}>
-                СетьРезерв · Демо-пространство<span>01</span>
+                СетьРезерв · Рабочее пространство<span>01</span>
               </div>
             </article>
           ) : (

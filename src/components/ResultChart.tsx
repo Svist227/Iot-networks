@@ -17,11 +17,7 @@ export function ResultChart({ preset }: { preset: DemoPreset }) {
     withReserve,
   }));
   return (
-    <div
-      className={s.chart}
-      role="img"
-      aria-label={`Демонстрационный график очереди: ${demoResults[preset].label}`}
-    >
+    <div className={s.chart} role="img" aria-label={`График очереди: ${demoResults[preset].label}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 25, right: 20, left: 8, bottom: 15 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e3e7e5" />

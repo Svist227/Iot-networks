@@ -37,7 +37,7 @@ export default function Profile() {
         {[
           ['personal', 'Личные данные'],
           ['settings', 'Настройки'],
-          ['security', 'О демо-аккаунте'],
+          ['security', 'Хранение данных'],
         ].map(([id, label]) => (
           <button
             type="button"
@@ -59,7 +59,7 @@ export default function Profile() {
             {draft.firstName} {draft.lastName}
           </h2>
           <p>Участник команды</p>
-          <Badge warm>Демо-аккаунт</Badge>
+          <Badge>Личное пространство</Badge>
           <div className={s.team}>
             <h3>
               <Users size={21} />
@@ -71,7 +71,7 @@ export default function Profile() {
             </div>
             <div>
               <span>Доступ</span>
-              <strong>Демонстрационный</strong>
+              <strong>Локальный</strong>
             </div>
           </div>
         </aside>
@@ -143,7 +143,7 @@ export default function Profile() {
               <Toggle
                 checked={draft.completionNotice}
                 onChange={(completionNotice) => patch({ completionNotice })}
-                label="Показывать уведомление о готовности демо-результата"
+                label="Показывать уведомление о готовности результата"
               />
               <Notice>Настройки хранятся в этом браузере вместе с проектами.</Notice>
             </section>
@@ -152,11 +152,11 @@ export default function Profile() {
             <section className={s.panel}>
               <h2>
                 <ShieldCheck size={23} />
-                Демонстрационный аккаунт
+                Данные рабочего пространства
               </h2>
               <p>
-                Этот профиль показывает работу личного кабинета. Авторизация и серверное хранение
-                ещё не подключены.
+                Ваши проекты и настройки сохраняются на этом устройстве. Для работы с ними
+                используйте тот же браузер.
               </p>
               <Notice>
                 Проекты, сценарии и отчёты доступны в текущем браузере. Очистка данных сайта удалит

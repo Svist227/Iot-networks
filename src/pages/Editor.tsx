@@ -40,6 +40,7 @@ import {
   Timeline,
   Toggle,
 } from '../components/ui';
+import { useScenarioPlayback } from '../components/ScenarioPlayback';
 import s from '../styles/App.module.scss';
 
 function Device({ data, selected }: NodeProps<DeviceNode>) {
@@ -70,7 +71,7 @@ const nodeTypes = { device: Device };
 export default function Editor() {
   const p = useProject();
   const update = useStore((s) => s.updateProject);
-  const runScenario = useStore((s) => s.runScenario);
+  const { start, playback } = useScenarioPlayback();
   const runs = useStore((s) => s.runs);
   const navigate = useNavigate();
   const [tab, setTab] = useState('scheme');
@@ -104,8 +105,8 @@ export default function Editor() {
   };
   const run = () => {
     try {
-      const id = runScenario(p.id, scenario.id);
-      navigate(`/results?run=${id}`, { state: { justRan: true } });
+      setError('');
+      start(p, scenario);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -129,6 +130,7 @@ export default function Editor() {
   };
   return (
     <>
+      {playback}
       <Heading
         title={
           tab === 'parameters'
@@ -145,7 +147,7 @@ export default function Editor() {
         action={
           <Button variant="primary" onClick={run}>
             <Play size={17} />
-            Запустить демо
+            Запустить сценарий
           </Button>
         }
       />
@@ -267,7 +269,8 @@ export default function Editor() {
                   />
                 )}
                 <Notice>
-                  Параметры сохраняются в проекте. Графики пока используют готовые демо-наборы.
+                  Параметры сохраняются автоматически. Выберите сценарий, чтобы проследить ход
+                  событий.
                 </Notice>
                 <Button variant="danger" onClick={() => remove(selected.id)}>
                   <Trash2 size={16} />
@@ -355,7 +358,7 @@ export default function Editor() {
             Итого: {fmt(sensorCount(p.nodes))} датчиков · {fmt(messageRate(p.nodes))} сообщений/с
           </div>
           <Notice warm>
-            Демонстрационный режим. Изменения параметров не запускают инженерный расчёт.
+            Количество датчиков и интервал отправки определяют входящий поток сообщений.
           </Notice>
         </div>
       )}
@@ -373,13 +376,16 @@ export default function Editor() {
                   <Clock3 />
                   <span>
                     <strong>{r.scenario.name}</strong>
-                    <small>{date(r.createdAt)} · Демо-результат</small>
+                    <small>{date(r.createdAt)} · Результат сценария</small>
                   </span>
                   <ArrowRight size={18} />
                 </button>
               ))
           ) : (
-            <Empty title="Запусков пока нет" action={<Button onClick={run}>Запустить демо</Button>}>
+            <Empty
+              title="Запусков пока нет"
+              action={<Button onClick={run}>Запустить сценарий</Button>}
+            >
               Здесь появятся сохранённые снимки сценариев и схем.
             </Empty>
           )}

@@ -143,7 +143,7 @@ export function Projects() {
                   <div>
                     <div className={s.inline}>
                       <h2>{p.name}</h2>
-                      {i === 0 && <Badge>Демо</Badge>}
+                      {i === 0 && <Badge>Сеть телеметрии</Badge>}
                     </div>
                     <p>{p.description}</p>
                   </div>

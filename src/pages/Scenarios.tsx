@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BarChart3,
   ChevronRight,
@@ -22,14 +21,14 @@ import {
   Timeline,
   Toggle,
 } from '../components/ui';
+import { useScenarioPlayback } from '../components/ScenarioPlayback';
 import s from '../styles/App.module.scss';
 
 export default function Scenarios() {
   const p = useProject();
   const update = useStore((s) => s.updateProject);
   const save = useStore((s) => s.saveScenario);
-  const runScenario = useStore((s) => s.runScenario);
-  const navigate = useNavigate();
+  const { start, playback } = useScenarioPlayback();
   const selected = p.scenarios.find((s) => s.id === p.selectedScenarioId) ?? p.scenarios[0];
   const [draft, setDraft] = useState<Scenario>(structuredClone(selected));
   const [feedback, setFeedback] = useState('');
@@ -88,6 +87,7 @@ export default function Scenarios() {
   };
   return (
     <>
+      {playback}
       <Heading
         title="Проверьте сеть в разных условиях"
         description="Настройте нагрузку, отказы и время событий в вашей сети."
@@ -96,8 +96,11 @@ export default function Scenarios() {
             variant="primary"
             onClick={() => {
               if (persistDraft()) {
-                const id = runScenario(p.id, draft.id);
-                navigate(`/results?run=${id}`, { state: { justRan: true } });
+                try {
+                  start(p, draft);
+                } catch (error) {
+                  setError((error as Error).message);
+                }
               }
             }}
           >
@@ -150,7 +153,7 @@ export default function Scenarios() {
               <Link2Off size={27} />
               <h2>{draft.name || 'Новый сценарий'}</h2>
             </div>
-            <Badge warm>Демо</Badge>
+            <Badge>Сценарий</Badge>
           </div>
           <Field label="Название сценария">
             <input
@@ -282,8 +285,8 @@ export default function Scenarios() {
             </p>
           )}
           <Notice>
-            Запуск сохранит ваши настройки и откроет подготовленный пример для выбранного типа
-            события. Это демонстрация интерфейса, а не расчёт схемы.
+            Запустите сценарий, чтобы проследить события на схеме. Воспроизведение можно
+            приостановить или ускорить, а после завершения — открыть результаты.
           </Notice>
         </section>
       </div>

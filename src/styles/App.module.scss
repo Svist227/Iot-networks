@@ -2030,3 +2030,41 @@
   font-size: 13px;
   max-width: calc(100vw - 32px);
 }
+.flowingConnection {
+  animation: messageFlow 900ms linear infinite;
+}
+@keyframes messageFlow {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+.affectedNode {
+  border-color: #d7815e;
+  background: #fff1e8;
+  color: #bc6946;
+}
+.workingReserve {
+  border-color: #249f81;
+  border-style: solid;
+  background: #e7f7ed;
+}
+.comparisonDetails {
+  margin-top: 18px;
+  padding: 13px 17px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #81948d;
+  font-size: 11px;
+  summary {
+    cursor: pointer;
+  }
+  p {
+    margin-top: 10px;
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flowingConnection {
+    animation: none;
+  }
+}

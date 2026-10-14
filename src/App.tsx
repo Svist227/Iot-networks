@@ -1,5 +1,5 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
-import { BrowserRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { HashRouter, NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import {
   BarChart3,
   CheckCircle2,
@@ -42,7 +42,14 @@ function Workspace() {
   }, [location.pathname, pageName]);
   return (
     <div className={s.app}>
-      <a href="#main" className={s.skipLink}>
+      <a
+        href="#main"
+        className={s.skipLink}
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById('main')?.focus();
+        }}
+      >
         К содержимому
       </a>
       {menu && (
@@ -72,14 +79,10 @@ function Workspace() {
           ))}
         </nav>
         <div className={s.sidebarBottom}>
-          <div className={s.demoMark}>
-            <span className={s.liveDot} />
-            Демонстрационная версия
-          </div>
           <NavLink to="/projects" className={s.workspaceLink}>
             <Database size={21} />
             <span>
-              Демо-пространство<small>Локально в браузере</small>
+              Мои проекты<small>Локально в браузере</small>
             </span>
             <ChevronRight size={16} />
           </NavLink>
@@ -118,7 +121,7 @@ function Workspace() {
             {initials}
           </NavLink>
         </header>
-        <main id="main" className={s.main}>
+        <main id="main" tabIndex={-1} className={s.main}>
           {storageError && (
             <Notice warm>
               Браузер не разрешил сохранение. Изменения доступны только до закрытия страницы.
@@ -140,7 +143,7 @@ function Workspace() {
               СетьРезерв <span className={s.footerDivider}>/</span> Исследуйте устойчивость вашей
               сети
             </span>
-            <span>Демо · v0.1</span>
+            <span>v0.2</span>
           </footer>
         </main>
       </div>
@@ -149,8 +152,8 @@ function Workspace() {
 }
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Workspace />
-    </BrowserRouter>
+    </HashRouter>
   );
 }

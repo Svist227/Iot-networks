@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { initialProjects, makeProject, makeRun, uid } from './model';
+import { initialProjects, makeProject, uid } from './model';
 import type { Profile, Project, Report, Run, Scenario } from './model';
 
 type Store = {
@@ -14,7 +14,7 @@ type Store = {
   addProject: (name: string, template: string) => string;
   updateProject: (id: string, patch: Partial<Project>) => void;
   saveScenario: (projectId: string, scenario: Scenario) => void;
-  runScenario: (projectId: string, scenarioId: string) => string;
+  saveRun: (run: Run) => void;
   createReport: (runId: string) => string;
   updateProfile: (profile: Profile) => void;
 };
@@ -78,14 +78,8 @@ export const useStore = create<Store>()(
           selectedScenarioId: scenario.id,
         });
       },
-      runScenario: (projectId, scenarioId) => {
-        const p = get().projects.find((p) => p.id === projectId);
-        const scenario = p?.scenarios.find((s) => s.id === scenarioId);
-        if (!p || !scenario) throw new Error('Сценарий не найден.');
-        const run = makeRun(p, scenario);
-        set((s) => ({ runs: [run, ...s.runs] }));
-        return run.id;
-      },
+      saveRun: (run) =>
+        set((s) => ({ runs: s.runs.some((r) => r.id === run.id) ? s.runs : [run, ...s.runs] })),
       createReport: (runId) => {
         const run = get().runs.find((r) => r.id === runId);
         if (!run) throw new Error('Сначала запустите сценарий.');
