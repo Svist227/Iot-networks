@@ -40,6 +40,7 @@ import {
   Timeline,
   Toggle,
 } from '../components/ui';
+import { calculationInput } from '../data/simulation';
 import { useScenarioPlayback } from '../components/ScenarioPlayback';
 import s from '../styles/App.module.scss';
 
@@ -75,10 +76,20 @@ export default function Editor() {
   const runs = useStore((s) => s.runs);
   const navigate = useNavigate();
   const [tab, setTab] = useState('scheme');
+  const [expanded, setExpanded] = useState(false);
   const [selectedId, setSelectedId] = useState('g');
   const [error, setError] = useState('');
   const selected = p.nodes.find((n) => n.id === selectedId);
   const scenario = p.scenarios.find((s) => s.id === p.selectedScenarioId) ?? p.scenarios[0];
+  let diagnosis = '';
+  try {
+    calculationInput(p, scenario);
+  } catch (e) {
+    diagnosis = (e as Error).message;
+  }
+  const throughput = Math.min(
+    ...p.nodes.filter((n) => !n.data.reserve && !isSensor(n.data.kind)).map((n) => n.data.capacity),
+  );
   const patchNode = (id: string, data: Partial<DeviceNode['data']>) =>
     update(p.id, {
       nodes: p.nodes.map((n) => (n.id === id ? { ...n, data: { ...n.data, ...data } } : n)),
@@ -151,6 +162,38 @@ export default function Editor() {
           </Button>
         }
       />
+      <div className={s.networkStats}>
+        <span>
+          ИСТОЧНИКИ <b>{fmt(sensorCount(p.nodes))}</b>
+        </span>
+        <span>
+          ВХОДЯЩИЙ ПОТОК{' '}
+          <b>
+            {fmt(messageRate(p.nodes))} <small>сообщ./с</small>
+          </b>
+        </span>
+        <span>
+          СКОРОСТЬ ЦЕПОЧКИ{' '}
+          <b>
+            {Number.isFinite(throughput) ? fmt(throughput) : '—'} <small>сообщ./с</small>
+          </b>
+        </span>
+        <span className={diagnosis ? s.statWarning : ''}>
+          ПРОВЕРКА СХЕМЫ <b>{diagnosis ? 'Требует внимания' : 'Готова к запуску'}</b>
+        </span>
+      </div>
+      {diagnosis && <Notice warm>{diagnosis}</Notice>}
+      {p.templateId === 'station' && (
+        <details className={s.exampleDetails}>
+          <summary>Исходные данные насосной станции</summary>
+          <p>
+            Расчётный пример: 700 датчиков в восьми группах. Температура — каждые 10 с, вибрация —
+            каждые 2 с, давление — каждые 5 с. Скорости: шлюз 180, канал 160, сервер 220
+            сообщений/с. Буфер 8 000, задержка канала 20 мс. Это заданные условия исследования, а не
+            измерения действующего объекта; все параметры можно изменить.
+          </p>
+        </details>
+      )}
       <div className={s.tabs}>
         {[
           ['scheme', 'Схема сети'],
@@ -164,7 +207,7 @@ export default function Editor() {
       </div>
       {error && <Notice warm>{error}</Notice>}
       {tab === 'scheme' && (
-        <div className={s.editorGrid}>
+        <div className={`${s.editorGrid} ${expanded ? s.editorExpanded : ''}`}>
           <div className={s.canvas}>
             <div className={s.canvasToolbar}>
               <select
@@ -182,6 +225,9 @@ export default function Editor() {
                 ))}
               </select>
               <Badge>{p.nodes.length} устройств</Badge>
+              <Button onClick={() => setExpanded(!expanded)}>
+                {expanded ? 'Свернуть' : 'На весь экран'}
+              </Button>
             </div>
             <ReactFlow
               key={p.id}
@@ -239,13 +285,6 @@ export default function Editor() {
                     />
                   </>
                 ) : selected.data.kind === 'channel' ? (
-                  <Numeric
-                    label="Задержка канала, мс"
-                    value={selected.data.latency}
-                    min={0}
-                    onChange={(latency) => patchNode(selected.id, { latency })}
-                  />
-                ) : (
                   <>
                     <Numeric
                       label="Пропускная способность, сообщ./с"
@@ -254,11 +293,28 @@ export default function Editor() {
                       onChange={(capacity) => patchNode(selected.id, { capacity })}
                     />
                     <Numeric
-                      label="Размер буфера, сообщений"
-                      value={selected.data.buffer}
+                      label="Задержка канала, мс"
+                      value={selected.data.latency}
                       min={0}
-                      onChange={(buffer) => patchNode(selected.id, { buffer })}
+                      onChange={(latency) => patchNode(selected.id, { latency })}
                     />
+                  </>
+                ) : (
+                  <>
+                    <Numeric
+                      label="Пропускная способность, сообщ./с"
+                      value={selected.data.capacity}
+                      min={1}
+                      onChange={(capacity) => patchNode(selected.id, { capacity })}
+                    />
+                    {selected.data.kind === 'gateway' && (
+                      <Numeric
+                        label="Размер буфера, сообщений"
+                        value={selected.data.buffer}
+                        min={0}
+                        onChange={(buffer) => patchNode(selected.id, { buffer })}
+                      />
+                    )}
                   </>
                 )}
                 {selected.data.kind === 'gateway' && (

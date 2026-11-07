@@ -143,7 +143,7 @@ function Workspace() {
               СетьРезерв <span className={s.footerDivider}>/</span> Исследуйте устойчивость вашей
               сети
             </span>
-            <span>v0.2</span>
+            <span>v0.3</span>
           </footer>
         </main>
       </div>

@@ -22,11 +22,15 @@ import {
 import { useStore } from '../data/store';
 import { fmt, sensorCount, type Project } from '../data/model';
 import { Badge, Button, Empty, Field, Heading, IconButton, Modal } from '../components/ui';
+import { HeroNetworkScene } from '../components/HeroNetworkScene';
 import { NetworkPreview } from '../components/NetworkPreview';
 import s from '../styles/App.module.scss';
 
 export function Projects() {
   const projects = useStore((s) => s.projects);
+  const runs = useStore((s) => s.runs);
+  const activeId = useStore((s) => s.activeProjectId);
+  const recent = projects.find((p) => p.id === activeId && !p.archived);
   const addProject = useStore((s) => s.addProject);
   const update = useStore((s) => s.updateProject);
   const select = useStore((s) => s.selectProject);
@@ -35,7 +39,7 @@ export function Projects() {
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState<'create' | Project | null>(null);
   const [name, setName] = useState('');
-  const [template, setTemplate] = useState('reserve');
+  const [template, setTemplate] = useState('single');
   const visible = projects.filter(
     (p) =>
       (filter === 'archive' ? p.archived : !p.archived && (filter !== 'favorites' || p.favorite)) &&
@@ -45,7 +49,7 @@ export function Projects() {
     select(p.id);
     navigate(path);
   };
-  const create = (preset = 'reserve') => {
+  const create = (preset = 'single') => {
     setTemplate(preset);
     setName('');
     setModal('create');
@@ -79,6 +83,55 @@ export function Projects() {
   }
   return (
     <>
+      <section className={s.homeHero}>
+        <div>
+          <span className={s.eyebrow}>СЕТЬ ПОД КОНТРОЛЕМ</span>
+          <h1>
+            Увидьте, как сеть
+            <br />
+            переживёт отказ.
+          </h1>
+          <p>
+            От схемы телеметрии до обоснованного выбора буфера. Задайте событие и проследите путь
+            каждого изменения.
+          </p>
+          <div className={s.inline}>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const id =
+                  projects.find((p) => p.templateId === 'station' && !p.archived)?.id ??
+                  addProject('Насосная станция Северная', 'station');
+                select(id);
+                navigate('/editor');
+              }}
+            >
+              Исследовать насосную станцию <ArrowRight size={18} />
+            </Button>
+            <Button onClick={() => create()}>Новая сеть</Button>
+          </div>
+          <small>8 групп источников · 700 датчиков · 130 сообщений/с</small>
+        </div>
+        <HeroNetworkScene />
+      </section>
+      {recent && (
+        <div className={s.resumeProject}>
+          <div>
+            <span className={s.eyebrow}>ПРОДОЛЖИТЬ ИССЛЕДОВАНИЕ</span>
+            <strong>{recent.name}</strong>
+            <small>
+              {runs.find((r) => r.projectId === recent.id)?.scenario.name ??
+                'Схема готова к вашему следующему эксперименту'}
+            </small>
+          </div>
+          <Button onClick={() => open(recent)}>
+            Открыть проект <ArrowRight size={16} />
+          </Button>
+          {runs.some((r) => r.projectId === recent.id) && (
+            <Button onClick={() => open(recent, '/results')}>Последний результат</Button>
+          )}
+        </div>
+      )}
       <Heading
         eyebrow="ВАШЕ РАБОЧЕЕ ПРОСТРАНСТВО"
         title="Ваши сети и эксперименты"
@@ -203,7 +256,7 @@ export function Projects() {
             {
               icon: BarChart3,
               title: 'Сравните результаты',
-              text: 'Посмотрите, как резервирование влияет на очередь и восстановление.',
+              text: 'Сравните размеры буфера по потерям сообщений, очереди и задержкам.',
             },
           ].map(({ icon: Icon, title, text }, i) => (
             <div className={s.step} key={title}>
@@ -238,13 +291,13 @@ export function Projects() {
               id: 'reserve',
               icon: GitBranch,
               name: 'Резервный канал',
-              description: 'Основной и резервный маршруты',
+              description: 'Расчёт основного пути; резерв — в плане',
             },
             {
               id: 'segments',
               icon: Network,
               name: 'Несколько сегментов',
-              description: 'Сеть с несколькими участками',
+              description: 'Для схемы; расчёт сегментов — в плане',
             },
           ].map(({ id, icon: Icon, name, description }) => (
             <button key={id} className={s.template} onClick={() => create(id)}>
@@ -290,6 +343,7 @@ export function Projects() {
             {modal === 'create' && (
               <Field label="Начальная схема">
                 <select value={template} onChange={(e) => setTemplate(e.target.value)}>
+                  <option value="station">Насосная станция · 700 датчиков</option>
                   <option value="single">Один шлюз</option>
                   <option value="reserve">Резервный канал</option>
                   <option value="segments">Несколько сегментов</option>

@@ -6,6 +6,8 @@ import { date, demoResults, fmt } from '../data/model';
 import { Badge, Button, Empty, Field, Heading, Modal, Notice } from '../components/ui';
 import { NetworkPreview } from '../components/NetworkPreview';
 import { Metrics } from './Results';
+import { CalculatedMetrics, CalculationDetails } from '../components/CalculationView';
+import { calculationConclusion } from '../data/simulation';
 import s from '../styles/App.module.scss';
 
 export default function Reports() {
@@ -134,20 +136,67 @@ export default function Reports() {
               ) : (
                 <p>Штатный режим без событий.</p>
               )}
-              <h3>Сравнение: {demoResults[run.preset].label}</h3>
-              <Metrics preset={run.preset} />
-              <div className={s.paperColumns}>
-                <div>
-                  <h3>Вывод</h3>
-                  <p>{demoResults[run.preset].conclusion}</p>
-                </div>
-                <div>
-                  <h3>Допущения</h3>
+              {run.calculation ? (
+                <>
+                  <h3>Очередь во времени</h3>
+                  <svg viewBox="0 0 800 140" width="100%" role="img" aria-label="Очередь в отчёте">
+                    {run.calculation.results.map((r, i) => (
+                      <path
+                        key={r.buffer}
+                        d={r.points
+                          .map(
+                            (p, j) =>
+                              `${j ? 'L' : 'M'}${(p.time / run.scenario.duration) * 790},${130 - (p.queue / Math.max(1, ...run.calculation!.results.map((x) => x.peak))) * 120}`,
+                          )
+                          .join(' ')}
+                        fill="none"
+                        stroke={['#d16a48', '#087f84', '#7366ac', '#527946'][i]}
+                        strokeWidth="2.5"
+                      />
+                    ))}
+                  </svg>
                   <p>
-                    Фиксированный набор показателей, 10 минут. Оба варианта приведены для сравнения.
+                    {run.calculation.results.map((r) => `Буфер ${r.buffer}`).join(' · ')} · 0–
+                    {run.scenario.duration} с
                   </p>
-                </div>
-              </div>
+                  <h3>Сравнение размеров буфера</h3>
+                  <CalculatedMetrics calculation={run.calculation} />
+                  <h3>Вывод</h3>
+                  <p>{calculationConclusion(run.calculation)}</p>
+                  <h3>Параметры и метод расчёта</h3>
+                  <CalculationDetails run={run} />
+                  <h3>Параметры источников</h3>
+                  <ul>
+                    {run.nodes
+                      .filter((n) => ['temperature', 'pressure', 'vibration'].includes(n.data.kind))
+                      .map((n) => (
+                        <li key={n.id}>
+                          {n.data.label}: {fmt(n.data.count)} датчиков, интервал{' '}
+                          {fmt(n.data.interval)} с.
+                        </li>
+                      ))}
+                  </ul>
+                </>
+              ) : (
+                <>
+                  <p>Архивный запуск без расчёта. Значения не рассчитаны по параметрам сети.</p>
+                  <h3>Сравнение: {demoResults[run.preset].label}</h3>
+                  <Metrics preset={run.preset} />
+                  <div className={s.paperColumns}>
+                    <div>
+                      <h3>Вывод</h3>
+                      <p>{demoResults[run.preset].conclusion}</p>
+                    </div>
+                    <div>
+                      <h3>Допущения</h3>
+                      <p>
+                        Фиксированный набор показателей, 10 минут. Оба варианта приведены для
+                        сравнения.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className={s.paperFooter}>
                 СетьРезерв · Рабочее пространство<span>01</span>

@@ -22,7 +22,7 @@ export function playbackSchedule(scenario: Scenario): PlaybackSegment[] {
     segments.push({
       from,
       to,
-      ms: active ? 2800 : 2200,
+      ms: active ? 8000 : 6500,
       phase: active ? 'event' : afterEvent ? 'recovery' : 'normal',
     });
   }

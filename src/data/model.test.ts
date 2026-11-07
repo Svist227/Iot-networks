@@ -58,10 +58,11 @@ describe('Run snapshots', () => {
     expect(run.edges.length).toBeGreaterThan(0);
     expect(run.scenario.events[0].duration).toBe(60);
   });
-  it('selects prepared datasets by event type, independently of numeric inputs', () => {
+  it('keeps event labels while calculating new runs', () => {
     const p = makeProject('Test');
     expect(makeRun(p, p.scenarios[0]).preset).toBe('normal');
     expect(makeRun(p, p.scenarios[1]).preset).toBe('outage');
     expect(makeRun(p, p.scenarios[2]).preset).toBe('load');
+    expect(makeRun(p, p.scenarios[2]).calculation?.version).toBe('queue-1.1');
   });
 });

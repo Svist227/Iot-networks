@@ -12,38 +12,83 @@ import {
   Play,
   X,
 } from 'lucide-react';
-import { makeRun, type Project, type Run, type Scenario } from '../data/model';
+import { validateScenario, type Project, type Run, type Scenario } from '../data/model';
+import { calculationInput } from '../data/simulation';
 import { clockLabel, playbackFrame, playbackSchedule } from '../data/playback';
 import { useStore } from '../data/store';
-import { Button, IconButton } from './ui';
+import { Button, IconButton, Modal, Notice } from './ui';
 import { NetworkPreview } from './NetworkPreview';
 import s from '../styles/Playback.module.scss';
+import { fmt } from '../data/model';
 
 export function useScenarioPlayback() {
   const [run, setRun] = useState<Run | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  const worker = useRef<Worker | null>(null);
+  useEffect(() => () => worker.current?.terminate(), []);
   const navigate = useNavigate();
   const start = (project: Project, scenario: Scenario) => {
-    if (run) return;
-    setRun(makeRun(project, scenario));
+    if (run || worker.current) return;
+    const problem = validateScenario(scenario, project.nodes);
+    if (problem) throw new Error(problem);
+    calculationInput(project, scenario);
+    setError('');
+    const job = new Worker(new URL('../data/calculation.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    worker.current = job;
+    setPending(true);
+    const finish = () => {
+      job.terminate();
+      worker.current = null;
+      setPending(false);
+    };
+    job.onmessage = ({ data }: MessageEvent<{ run?: Run; error?: string }>) => {
+      finish();
+      if (data.run) setRun(data.run);
+      else setError(data.error ?? 'Не удалось выполнить расчёт.');
+    };
+    job.onerror = () => {
+      finish();
+      setError('Не удалось запустить расчёт. Перезагрузите страницу и повторите попытку.');
+    };
+    job.postMessage({ project, scenario });
+  };
+  const cancel = () => {
+    worker.current?.terminate();
+    worker.current = null;
+    setPending(false);
   };
   return {
     start,
-    playback: run && (
-      <ScenarioPlayback
-        key={run.id}
-        run={run}
-        onComplete={() => useStore.getState().saveRun(run)}
-        onClose={() => setRun(null)}
-        onOpen={() => {
-          setRun(null);
-          navigate(`/results?run=${run.id}`, { state: { justRan: true } });
-        }}
-      />
+    playback: (
+      <>
+        {error && <Notice warm>{error}</Notice>}
+        {pending && (
+          <Modal title="Рассчитываем варианты буфера" onClose={cancel}>
+            <p role="status">Обрабатываем сообщения, очередь и события сценария…</p>
+            <Button onClick={cancel}>Отменить расчёт</Button>
+          </Modal>
+        )}
+        {run && (
+          <ScenarioPlayback
+            key={run.id}
+            run={run}
+            onComplete={() => useStore.getState().saveRun(run)}
+            onClose={() => setRun(null)}
+            onOpen={() => {
+              setRun(null);
+              navigate(`/results?run=${run.id}`, { state: { justRan: true } });
+            }}
+          />
+        )}
+      </>
     ),
   };
 }
 
-function ScenarioPlayback({
+export function ScenarioPlayback({
   run,
   onComplete,
   onClose,
@@ -62,6 +107,29 @@ function ScenarioPlayback({
   const schedule = useMemo(() => playbackSchedule(run.scenario), [run.scenario]);
   const frame = playbackFrame(run.scenario, schedule, elapsed);
   const done = frame.phase === 'complete';
+  const calculated = run.calculation?.results.find(
+    (r) => r.buffer === run.calculation?.configuredBuffer,
+  );
+  const snapshot = calculated?.points.reduce(
+    (previous, point) => (point.time <= frame.time ? point : previous),
+    calculated.points[0],
+  );
+  const fill =
+    calculated && snapshot
+      ? Math.min(100, (snapshot.queue / Math.max(1, calculated.buffer)) * 100)
+      : 0;
+  const seek = (time: number) => {
+    let ms = 0;
+    for (const segment of schedule) {
+      if (segment.to > segment.from && time >= segment.from && time <= segment.to) {
+        ms += ((time - segment.from) / (segment.to - segment.from)) * segment.ms;
+        break;
+      }
+      ms += segment.ms;
+    }
+    setElapsed(ms);
+    setPaused(true);
+  };
   const eventStarted = run.scenario.events.some((e) => e.start <= frame.time);
   const eventName = (kind: string) =>
     kind === 'load' ? 'Рост нагрузки' : kind === 'node' ? 'Отказ узла' : 'Обрыв канала';
@@ -174,6 +242,8 @@ function ScenarioPlayback({
             running: !paused && !done && frame.phase !== 'prepare' && frame.phase !== 'finalize',
             reserve: run.scenario.reserve,
             hasEvent: frame.active.length > 0,
+            queue: snapshot?.queue,
+            buffer: calculated?.buffer,
           }}
         />
         <div className={s.sceneCaption}>
@@ -184,6 +254,65 @@ function ScenarioPlayback({
           <span>Резерв {run.scenario.reserve ? 'включён' : 'выключен'}</span>
         </div>
       </div>
+      {snapshot && calculated && (
+        <section className={s.telemetry} aria-label="Рассчитанное состояние сети">
+          <div>
+            <small>Очередь шлюза</small>
+            <strong>
+              {fmt(snapshot.queue)} <em>/ {fmt(calculated.buffer)}</em>
+            </strong>
+            <div className={s.queueGauge}>
+              <i style={{ width: `${fill}%` }} />
+            </div>
+          </div>
+          <div>
+            <small>Доставлено</small>
+            <strong>{snapshot.delivered === undefined ? '—' : fmt(snapshot.delivered)}</strong>
+          </div>
+          <div>
+            <small>Потеряно</small>
+            <strong>{snapshot.lost === undefined ? '—' : fmt(snapshot.lost)}</strong>
+          </div>
+          <div>
+            <small>Срез расчёта</small>
+            <strong>{clockLabel(snapshot.time)}</strong>
+          </div>
+          <svg viewBox="0 0 1000 100" role="img" aria-label="Очередь во времени">
+            <path
+              d={calculated.points
+                .filter((p) => p.time <= frame.time)
+                .map(
+                  (p, i) =>
+                    `${i ? 'L' : 'M'}${(p.time / run.scenario.duration) * 1000},${94 - (p.queue / Math.max(1, calculated.peak)) * 85}`,
+                )
+                .join(' ')}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            <line
+              x1={(frame.time / run.scenario.duration) * 1000}
+              x2={(frame.time / run.scenario.duration) * 1000}
+              y1="0"
+              y2="100"
+              stroke="currentColor"
+              strokeDasharray="4 4"
+            />
+          </svg>
+        </section>
+      )}
+      <label className={s.scrubber}>
+        Время сценария · переместите ползунок для исследования
+        <input
+          type="range"
+          min="0"
+          max={run.scenario.duration}
+          step={run.scenario.duration / 300}
+          value={frame.time}
+          onChange={(e) => seek(Number(e.target.value))}
+          aria-label="Время воспроизведения"
+        />
+      </label>
       <div className={s.status} role="status" aria-live="polite">
         <span className={`${s.statusIcon} ${done ? s.completeIcon : ''}`}>
           {done ? <CheckCircle2 /> : paused ? <Pause /> : <LoaderCircle className={s.spin} />}
@@ -262,7 +391,7 @@ function ScenarioPlayback({
                 aria-label={
                   speed === 1 ? 'Ускорить воспроизведение' : 'Обычная скорость воспроизведения'
                 }
-                onClick={() => setSpeed((value) => (value === 1 ? 2 : 1))}
+                onClick={() => setSpeed((value) => (value === 1 ? 2 : value === 2 ? 4 : 1))}
               >
                 {speed}×
               </Button>

@@ -4,6 +4,8 @@ import { DeviceIcon } from './ui';
 import s from '../styles/App.module.scss';
 
 type Playback = {
+  queue?: number;
+  buffer?: number;
   activeIds: string[];
   loadIds: string[];
   running: boolean;
@@ -20,6 +22,30 @@ export function NetworkPreview({
   playback?: Playback;
 }) {
   const marker = useId().replaceAll(':', '');
+  // Fit grouped sources above the delivery chain during playback, preserving the saved graph.
+  if (playback && project.nodes.length > 8) {
+    let sourceIndex = 0;
+    project = {
+      ...project,
+      nodes: project.nodes.map((node) => {
+        if (['temperature', 'vibration', 'pressure'].includes(node.data.kind)) {
+          const index = sourceIndex++;
+          return { ...node, position: { x: (index % 4) * 245, y: Math.floor(index / 4) * 115 } };
+        }
+        const row =
+          Math.ceil(
+            project.nodes.filter((n) =>
+              ['temperature', 'vibration', 'pressure'].includes(n.data.kind),
+            ).length / 4,
+          ) *
+            115 +
+          60;
+        const x = node.data.kind === 'gateway' ? 150 : node.data.kind === 'channel' ? 490 : 830;
+        return { ...node, position: { x, y: row } };
+      }),
+    };
+  }
+
   const minX = Math.min(0, ...project.nodes.map((n) => n.position.x - 15));
   const minY = Math.min(0, ...project.nodes.map((n) => n.position.y - 15));
   const maxX = Math.max(1080, ...project.nodes.map((n) => n.position.x + 205));
@@ -29,7 +55,11 @@ export function NetworkPreview({
       <svg
         viewBox={`${minX} ${minY} ${maxX - minX} ${maxY - minY}`}
         role="img"
-        aria-label={playback ? 'Ход сценария на схеме сети' : 'Предпросмотр схемы сети'}
+        aria-label={
+          playback
+            ? 'Ход сценария на схеме сети'
+            : 'Предпросмотр схемы сети'
+        }
       >
         <defs>
           <marker id={marker} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
@@ -53,7 +83,13 @@ export function NetworkPreview({
           return (
             <path
               key={edge.id}
-              d={`M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`}
+              d={
+                playback &&
+                project.nodes.length > 8 &&
+                ['temperature', 'vibration', 'pressure'].includes(a.data.kind)
+                  ? `M${a.position.x + 94},${a.position.y + 86} C${a.position.x + 94},${b.position.y - 25} ${b.position.x + 94},${b.position.y - 25} ${b.position.x + 94},${b.position.y}`
+                  : `M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`
+              }
               className={flowing ? s.flowingConnection : ''}
               fill="none"
               stroke={affected ? '#d97b56' : '#348e90'}
@@ -83,19 +119,23 @@ export function NetworkPreview({
                 <div>
                   <strong>{node.data.label}</strong>
                   <small>
-                    {affected
-                      ? 'Временно недоступен'
-                      : loaded
-                        ? 'Нагрузка повышена'
-                        : reserveActive
-                          ? 'Резерв включён'
-                          : ['temperature', 'vibration', 'pressure'].includes(node.data.kind)
-                            ? `${node.data.count} датчиков`
-                            : node.data.reserve
-                              ? 'Резервный'
-                              : node.data.kind === 'channel'
-                                ? `${node.data.latency} мс`
-                                : 'Онлайн'}
+                    {node.data.kind === 'gateway' &&
+                    !node.data.reserve &&
+                    playback?.queue !== undefined
+                      ? `Очередь ${playback.queue.toLocaleString('ru-RU')} / ${playback.buffer?.toLocaleString('ru-RU')}`
+                      : affected
+                        ? 'Временно недоступен'
+                        : loaded
+                          ? 'Нагрузка повышена'
+                          : reserveActive
+                            ? 'Резерв включён'
+                            : ['temperature', 'vibration', 'pressure'].includes(node.data.kind)
+                              ? `${node.data.count} датчиков`
+                              : node.data.reserve
+                                ? 'Резервный'
+                                : node.data.kind === 'channel'
+                                  ? `${node.data.latency} мс`
+                                  : 'Онлайн'}
                   </small>
                 </div>
               </div>

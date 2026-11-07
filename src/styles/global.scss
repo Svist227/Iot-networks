@@ -199,3 +199,24 @@ dialog::backdrop {
     scroll-behavior: auto !important;
   }
 }
+:root {
+  --bg: #f3f6f3;
+  --muted: #657e85;
+  --line: #dce6df;
+  background: var(--bg);
+}
+p {
+  color: #687f85;
+}
+input,
+select,
+textarea {
+  font-size: 14px;
+  border-radius: 9px;
+}
+h1 {
+  font-weight: 700;
+}
+h2 {
+  font-weight: 650;
+}
