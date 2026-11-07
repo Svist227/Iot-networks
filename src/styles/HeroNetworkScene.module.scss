@@ -1,0 +1,122 @@
+.scene {
+  position: relative;
+  align-self: center;
+  min-width: 0;
+  padding-left: 18px;
+}
+.network {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.orbit,
+.orbitOuter {
+  fill: none;
+  stroke: #a4dfca;
+  stroke-width: 0.7;
+  opacity: 0.1;
+}
+.orbitOuter {
+  opacity: 0.045;
+}
+.links {
+  fill: none;
+  stroke: #86c9b9;
+  stroke-width: 1.4;
+  opacity: 0.45;
+}
+.packets {
+  fill: none;
+  stroke: #b8ffe6;
+  stroke-width: 3;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px #89eac4);
+}
+.packets path {
+  stroke-dasharray: 8 68;
+  animation: transmit 2.4s linear var(--packet-delay, -1.1s) infinite;
+}
+.packets path:nth-child(2) {
+  --packet-delay: -2s;
+}
+.packets path:nth-child(3) {
+  --packet-delay: -0.4s;
+}
+.packets path:nth-child(4) {
+  --packet-delay: -1.6s;
+}
+@keyframes transmit {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -76;
+  }
+}
+.sensor,
+.server {
+  stroke: #96d7ca;
+  stroke-opacity: 0.4;
+  stroke-width: 1;
+}
+.icon {
+  color: #bbe9dc;
+}
+.led {
+  fill: #9ce9c7;
+  filter: drop-shadow(0 0 4px #91efbda0);
+  animation: signal 2.8s ease-in-out infinite;
+  animation-delay: -1.4s;
+}
+.hubLeds rect {
+  animation: signal 2.8s ease-in-out infinite;
+  animation-delay: -0.5s;
+}
+.hubLeds rect:nth-child(2) {
+  animation-delay: -1.4s;
+}
+.hubLeds rect:nth-child(3) {
+  animation-delay: -2.2s;
+}
+@keyframes signal {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.hub {
+  filter: drop-shadow(0 12px 14px #082f3a55);
+}
+.sourceLabel,
+.deviceLabel {
+  font-family: inherit;
+  text-anchor: middle;
+  fill: #b4d5cf;
+  font-size: 11px;
+  font-weight: 400;
+}
+.deviceLabel {
+  fill: #dcf2e9;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+@media (max-width: 760px) {
+  .scene {
+    padding: 16px 0 0;
+    margin: 0 -8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .led,
+  .hubLeds rect {
+    animation: none;
+  }
+  .packets path {
+    // Opt this small ambient flow into gentle motion despite the global motion reset.
+    animation: transmit 4.8s linear var(--packet-delay, -1.1s) infinite !important;
+  }
+}

@@ -266,3 +266,142 @@
     transition: none;
   }
 }
+/* Immersive replay */
+.dialog {
+  width: 1320px;
+  max-width: calc(100vw - 32px);
+  padding: 28px 36px;
+  background: #f5f8f6;
+  border-radius: 20px;
+}
+.header h2 {
+  font-size: 30px;
+}
+.scene {
+  background: #123d48;
+  border-color: #234e59;
+  border-radius: 14px;
+}
+.scene > div:first-child {
+  height: 340px;
+  background-color: #153e49;
+  background-image: radial-gradient(#ffffff20 0.8px, transparent 0.8px);
+}
+.sceneCaption {
+  background: #204d57;
+  color: #c6e7df;
+}
+.steps {
+  margin: 15px 0;
+}
+.telemetry {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 20px;
+  background: white;
+  border: 1px solid #dce7df;
+  border-radius: 14px;
+}
+.telemetry small {
+  color: #6c878c;
+  font-size: 12px;
+}
+.telemetry strong {
+  display: block;
+  font-size: 25px;
+  margin-top: 8px;
+}
+.telemetry em {
+  font-size: 13px;
+  font-style: normal;
+  color: #809b9c;
+}
+.telemetry svg {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 100px;
+  color: #0b8988;
+  background: linear-gradient(0deg, #eaf6f0, transparent);
+  border-bottom: 1px solid #c9e1d8;
+  margin-top: 8px;
+}
+.queueGauge {
+  height: 5px;
+  background: #e6efea;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+.queueGauge i {
+  display: block;
+  height: 100%;
+  background: #d88155;
+  border-radius: 6px;
+}
+.scrubber {
+  display: block;
+  font-size: 11px;
+  color: #5f8084;
+  margin: 16px 0;
+}
+.scrubber input {
+  display: block;
+  padding: 0;
+  accent-color: #07868b;
+  cursor: ew-resize;
+  margin: 8px 0;
+  width: 100%;
+}
+.status {
+  margin: 14px 0;
+}
+.events {
+  max-height: 180px;
+  overflow: auto;
+}
+.footer {
+  position: sticky;
+  bottom: -28px;
+  background: #f5f8f6;
+  padding: 14px 0;
+  z-index: 3;
+}
+.eyebrow {
+  font-size: 11px;
+}
+.scene small {
+  font-size: 12px;
+}
+.header p {
+  font-size: 14px;
+}
+@media (max-width: 600px) {
+  .dialog {
+    padding: 18px 14px;
+    max-width: calc(100vw - 16px);
+  }
+  .telemetry {
+    grid-template-columns: 1fr 1fr;
+    padding: 14px;
+    gap: 12px;
+  }
+  .telemetry strong {
+    font-size: 20px;
+  }
+  .scene > div:first-child {
+    height: 260px;
+  }
+  .header h2 {
+    font-size: 24px;
+  }
+  .footer {
+    bottom: -18px;
+  }
+  .steps {
+    gap: 4px;
+  }
+  .steps > div {
+    font-size: 10px;
+  }
+}

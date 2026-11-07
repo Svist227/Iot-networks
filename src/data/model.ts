@@ -1,4 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
+import { calculate, type Calculation } from './simulation';
 
 export type DeviceKind =
   'temperature' | 'vibration' | 'pressure' | 'gateway' | 'channel' | 'server';
@@ -28,9 +29,12 @@ export type Scenario = {
   name: string;
   duration: number;
   reserve: boolean;
+  sendingMode?: 'uniform' | 'synchronized';
+  comparisonBuffers?: number[];
   events: ScenarioEvent[];
 };
 export type Project = {
+  templateId?: string;
   id: string;
   name: string;
   description: string;
@@ -55,6 +59,7 @@ export type Run = {
   messageRate: number;
   nodes: DeviceNode[];
   edges: Edge[];
+  calculation?: Calculation;
 };
 export type Report = { id: string; runId: string; name: string; createdAt: string };
 export type Profile = {
@@ -135,7 +140,7 @@ export function makeProject(name: string, template = 'reserve'): Project {
     ['g', 'c'],
     ['c', 's'],
   ];
-  if (template !== 'single') {
+  if (template !== 'single' && template !== 'station') {
     const reserve = makeDevice('gateway', 'r', 450, 370, 'Шлюз B');
     reserve.data.reserve = true;
     nodes.push(reserve);
@@ -144,6 +149,34 @@ export function makeProject(name: string, template = 'reserve'): Project {
   if (template === 'segments') {
     nodes.push(makeDevice('temperature', 't2', 30, 500, 'Участок № 2'));
     links.push(['t2', 'r']);
+  }
+  if (template === 'station') {
+    nodes.splice(0, nodes.length);
+    links.splice(0, links.length);
+    const groups: [DeviceKind, string, number, number][] = [
+      ['temperature', 'Температура · двигатели А', 100, 10],
+      ['temperature', 'Температура · двигатели Б', 100, 10],
+      ['temperature', 'Температура · подшипники А', 100, 10],
+      ['temperature', 'Температура · подшипники Б', 100, 10],
+      ['vibration', 'Вибрация · насосы А', 50, 2],
+      ['vibration', 'Вибрация · насосы Б', 50, 2],
+      ['pressure', 'Давление · вход', 100, 5],
+      ['pressure', 'Давление · выход', 100, 5],
+    ];
+    groups.forEach(([kind, label, count, interval], i) => {
+      const node = makeDevice(kind, `source-${i}`, 0, i * 120, label);
+      Object.assign(node.data, { count, interval });
+      nodes.push(node);
+      links.push([node.id, 'g']);
+    });
+    const gateway = makeDevice('gateway', 'g', 400, 420, 'Шлюз станции');
+    Object.assign(gateway.data, { capacity: 180, buffer: 8000 });
+    const channel = makeDevice('channel', 'c', 720, 420, 'Магистральный канал');
+    Object.assign(channel.data, { capacity: 160, latency: 20 });
+    const server = makeDevice('server', 's', 1040, 420, 'Сервер телеметрии');
+    server.data.capacity = 220;
+    nodes.push(gateway, channel, server);
+    links.push(['g', 'c'], ['c', 's']);
   }
   const edges: Edge[] = links.map(([source, target]) => ({
     id: `${source}-${target}`,
@@ -157,26 +190,32 @@ export function makeProject(name: string, template = 'reserve'): Project {
     },
   }));
   const scenarios: Scenario[] = [
-    { id: uid(), name: 'Штатный режим', duration: 600, reserve: true, events: [] },
+    { id: uid(), name: 'Штатный режим', duration: 600, reserve: false, events: [] },
     {
       id: uid(),
       name: 'Обрыв канала',
       duration: 600,
-      reserve: true,
+      reserve: false,
       events: [{ id: uid(), kind: 'outage', target: 'c', start: 240, duration: 60, multiplier: 2 }],
     },
     {
       id: uid(),
       name: 'Пиковая нагрузка',
       duration: 600,
-      reserve: true,
+      reserve: false,
       events: [{ id: uid(), kind: 'load', target: 'g', start: 180, duration: 120, multiplier: 2 }],
     },
   ];
+  if (template === 'station')
+    scenarios.forEach((s) => {
+      s.comparisonBuffers = [4000, 8000, 12000];
+    });
   return {
     id: uid(),
     name,
-    description: 'Сеть телеметрии',
+    templateId: template,
+    description:
+      template === 'station' ? 'Насосная станция · 8 групп · 700 датчиков' : 'Сеть телеметрии',
     favorite: false,
     archived: false,
     updatedAt: new Date().toISOString(),
@@ -300,5 +339,6 @@ export function makeRun(project: Project, scenario: Scenario): Run {
     nodeCount: project.nodes.length,
     nodes: structuredClone(project.nodes),
     edges: structuredClone(project.edges),
+    calculation: calculate(project, scenario),
   };
 }

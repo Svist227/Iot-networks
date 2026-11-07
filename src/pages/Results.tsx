@@ -14,6 +14,8 @@ import { useProject, useStore } from '../data/store';
 import { date, demoResults, fmt, type DemoPreset } from '../data/model';
 import { Badge, Button, Empty, Heading } from '../components/ui';
 import { ResultChart } from '../components/ResultChart';
+import { ScenarioPlayback } from '../components/ScenarioPlayback';
+import { CalculationView } from '../components/CalculationView';
 import s from '../styles/App.module.scss';
 
 export function Metrics({ preset }: { preset: DemoPreset }) {
@@ -51,6 +53,7 @@ export function Metrics({ preset }: { preset: DemoPreset }) {
 }
 export default function Results() {
   const p = useProject();
+  const [replay, setReplay] = useState(false);
   const runs = useStore((s) => s.runs);
   const createReport = useStore((s) => s.createReport);
   const navigate = useNavigate();
@@ -70,7 +73,7 @@ export default function Results() {
       <>
         <Heading
           title="Результаты экспериментов"
-          description="Сравните поведение сети с резервным маршрутом и без него."
+          description="Сравните размеры буфера по потерям, очереди и задержкам доставки."
         />
         <div className={s.panel}>
           <Empty
@@ -90,6 +93,14 @@ export default function Results() {
   const result = demoResults[run.preset];
   return (
     <>
+      {replay && (
+        <ScenarioPlayback
+          run={run}
+          onComplete={() => {}}
+          onClose={() => setReplay(false)}
+          onOpen={() => setReplay(false)}
+        />
+      )}
       {notice && (
         <div className={s.toast} role="status">
           <ShieldCheck size={20} />
@@ -121,6 +132,10 @@ export default function Results() {
         }
       />
       <div className={s.resultControls}>
+        <Button onClick={() => setReplay(true)}>
+          <Play size={16} />
+          Воспроизвести / режим показа
+        </Button>
         <div className={s.inline}>
           <Badge>Завершён</Badge>
           <span className={s.muted}>{date(run.createdAt)}</span>
@@ -137,71 +152,82 @@ export default function Results() {
           ))}
         </select>
       </div>
-      <div className={s.successBanner}>
-        <ShieldCheck size={31} />
-        <div>
-          <strong>{result.conclusion}</strong>
-          <p>Сравните очередь, потери сообщений и время восстановления.</p>
-        </div>
-      </div>
-      <div className={s.resultsGrid}>
-        <section className={`${s.panel} ${s.chartPanel}`}>
-          <div className={s.sectionHeading}>
-            <h2>Сообщения в очереди</h2>
-            <div className={s.legend}>
-              <span>
-                <i className={s.orangeDot} />
-                Без резерва
-              </span>
-              <span>
-                <i />С резервом
-              </span>
+      {run.calculation ? (
+        <CalculationView run={run} />
+      ) : (
+        <>
+          <p className={s.notice}>
+            Архивный запуск без расчёта. Эти значения не рассчитаны по параметрам сети. Запустите
+            сценарий заново для расчёта.
+          </p>
+          <div className={s.successBanner}>
+            <ShieldCheck size={31} />
+            <div>
+              <strong>{result.conclusion}</strong>
+              <p>Сравните очередь, потери сообщений и время восстановления.</p>
             </div>
           </div>
-          <ResultChart preset={run.preset} />
-        </section>
-        <aside className={`${s.panel} ${s.insights}`}>
-          <h2>Что изменилось</h2>
-          {[
-            {
-              icon: BarChart3,
-              title: 'Пиковая очередь',
-              text: `${fmt(result.peak[0])} → ${fmt(result.peak[1])} сообщений в очереди.`,
-            },
-            {
-              icon: Clock3,
-              title: 'Время восстановления',
-              text: `${result.recovery[0]} → ${result.recovery[1]} с на очистку очереди после события.`,
-            },
-            {
-              icon: GitBranch,
-              title: 'Дополнительный маршрут',
-              text: 'Сравнение показывает, как резерв может принимать сообщения во время сбоя.',
-            },
-          ].map(({ icon: Icon, title, text }) => (
-            <div className={s.insight} key={title}>
-              <span>
-                <Icon size={23} />
-              </span>
-              <div>
-                <h3>{title}</h3>
-                <p>{text}</p>
+          <div className={s.resultsGrid}>
+            <section className={`${s.panel} ${s.chartPanel}`}>
+              <div className={s.sectionHeading}>
+                <h2>Сообщения в очереди</h2>
+                <div className={s.legend}>
+                  <span>
+                    <i className={s.orangeDot} />
+                    Без резерва
+                  </span>
+                  <span>
+                    <i />С резервом
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </aside>
-      </div>
-      <div className={`${s.panel} ${s.metricsPanel}`}>
-        <Metrics preset={run.preset} />
-      </div>
-      <details className={s.comparisonDetails}>
-        <summary>Параметры сравнения</summary>
-        <p>
-          Набор показателей: {result.label} · 10 минут. Настройки запуска:{' '}
-          {run.scenario.duration / 60} мин, событий — {run.scenario.events.length}. Сравнение
-          использует фиксированный набор показателей; изменения схемы не пересчитывают эти значения.
-        </p>
-      </details>
+              <ResultChart preset={run.preset} />
+            </section>
+            <aside className={`${s.panel} ${s.insights}`}>
+              <h2>Что изменилось</h2>
+              {[
+                {
+                  icon: BarChart3,
+                  title: 'Пиковая очередь',
+                  text: `${fmt(result.peak[0])} → ${fmt(result.peak[1])} сообщений в очереди.`,
+                },
+                {
+                  icon: Clock3,
+                  title: 'Время восстановления',
+                  text: `${result.recovery[0]} → ${result.recovery[1]} с на очистку очереди после события.`,
+                },
+                {
+                  icon: GitBranch,
+                  title: 'Дополнительный маршрут',
+                  text: 'Сравнение показывает, как резерв может принимать сообщения во время сбоя.',
+                },
+              ].map(({ icon: Icon, title, text }) => (
+                <div className={s.insight} key={title}>
+                  <span>
+                    <Icon size={23} />
+                  </span>
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
+                  </div>
+                </div>
+              ))}
+            </aside>
+          </div>
+          <div className={`${s.panel} ${s.metricsPanel}`}>
+            <Metrics preset={run.preset} />
+          </div>
+          <details className={s.comparisonDetails}>
+            <summary>Параметры сравнения</summary>
+            <p>
+              Набор показателей: {result.label} · 10 минут. Настройки запуска:{' '}
+              {run.scenario.duration / 60} мин, событий — {run.scenario.events.length}. Сравнение
+              использует фиксированный набор показателей; изменения схемы не пересчитывают эти
+              значения.
+            </p>
+          </details>
+        </>
+      )}
       <div className={`${s.panel} ${s.nextStep}`}>
         <div>
           <h3>Следующий эксперимент</h3>

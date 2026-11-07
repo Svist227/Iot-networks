@@ -23,6 +23,7 @@ import {
 } from '../components/ui';
 import { useScenarioPlayback } from '../components/ScenarioPlayback';
 import s from '../styles/App.module.scss';
+import { EventTimeline } from '../components/EventTimeline';
 
 export default function Scenarios() {
   const p = useProject();
@@ -62,7 +63,7 @@ export default function Scenarios() {
       id: uid(),
       name: `Сценарий ${p.scenarios.length + 1}`,
       duration: 600,
-      reserve: true,
+      reserve: false,
       events: [],
     };
     save(p.id, next);
@@ -109,6 +110,7 @@ export default function Scenarios() {
           </Button>
         }
       />
+      <EventTimeline scenario={draft} onChange={(events) => patch({ events })} />
       <div className={s.scenariosLayout}>
         <aside className={`${s.panel} ${s.scenarioList}`}>
           <h2>Сценарии проекта</h2>
@@ -144,7 +146,7 @@ export default function Scenarios() {
           <div className={s.scenarioTip}>
             Одна сеть — разные условия.
             <br />
-            Сравните вариант с резервом и без него.
+            Сравните размеры буфера при обычной и одновременной отправке сообщений.
           </div>
         </aside>
         <section className={`${s.panel} ${s.scenarioDetail}`}>
@@ -248,6 +250,42 @@ export default function Scenarios() {
             onChange={(reserve) => patch({ reserve })}
             label="Использовать резервный маршрут"
           />
+          <Notice>
+            Расчёт буфера: датчики → один основной шлюз → канал → сервер. Резервный маршрут должен
+            быть выключен. Отказ канала или сервера приостанавливает передачу; новые сообщения
+            накапливаются в шлюзе.
+          </Notice>
+          <Field label="Отправка датчиков">
+            <select
+              value={draft.sendingMode ?? 'uniform'}
+              onChange={(e) => patch({ sendingMode: e.target.value as Scenario['sendingMode'] })}
+            >
+              <option value="uniform">Равномерно в течение интервала</option>
+              <option value="synchronized">Одновременно в начале интервала</option>
+            </select>
+          </Field>
+          <div className={s.eventFields}>
+            {[0, 1, 2].map((i) => (
+              <Field key={i} label={`Буфер для сравнения ${i + 1}, сообщений`}>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000000}
+                  step={1}
+                  value={(draft.comparisonBuffers ?? [4000, 6000, 12000])[i] ?? 0}
+                  onChange={(e) => {
+                    const comparisonBuffers = [...(draft.comparisonBuffers ?? [4000, 6000, 12000])];
+                    comparisonBuffers[i] = Number(e.target.value);
+                    patch({ comparisonBuffers });
+                  }}
+                />
+              </Field>
+            ))}
+          </div>
+          <p className={s.muted}>
+            Буфер основного шлюза добавляется автоматически. При росте нагрузки число сообщений за
+            период умножается; при наложении событий множители перемножаются.
+          </p>
           <div className={s.timelineSection}>
             <h3>
               Временная шкала сценария <span>({draft.duration / 60} минут)</span>
